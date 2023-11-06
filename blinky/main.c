@@ -50,36 +50,64 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
+#include "nrf_gpio.h"
 #include "nrf_delay.h"
 #include "boards.h"
 
-#define DELAY 300
-#define DEVICE_ID 7202
-#define ID_LEN 4
+#define LED_COUNT 3
+#define BUTTON_PIN NRF_GPIO_PIN_MAP(1, 6)
+#define LED_R NRF_GPIO_PIN_MAP(0, 8)
+#define LED_G NRF_GPIO_PIN_MAP(1,9)
+#define LED_B NRF_GPIO_PIN_MAP(0,12)
+
+const uint32_t led_sequence[LED_COUNT] = {LED_R, LED_G, LED_B};
+char sequence[6] = {'R', 'R', 'G', 'G', 'G', 'B'};
+
+// Converts the characters from the sequence into LED indexes
+uint8_t hash_led(int c){
+    if (c == 'R') return 0;
+    else if (c == 'G') return 1;
+    else if (c == 'B') return 2;
+    else return 0;
+}
+
+// Plays the given sequence
+void play(uint8_t idx){
+    nrf_gpio_pin_write(led_sequence[idx], 0);
+    nrf_delay_ms(500);
+    nrf_gpio_pin_write(led_sequence[idx], 1);
+    nrf_delay_ms(500);
+}
+
+// Turns off all leds if user stops pressing the button
+void clear_all(){
+    nrf_gpio_pin_write(LED_R, 1);
+    nrf_gpio_pin_write(LED_G, 1);
+    nrf_gpio_pin_write(LED_B, 1);
+}
 
 /**
  * @brief Function for application main entry.
  */
 int main(void)
 {
-    /* Configure board. */
     bsp_board_init(BSP_INIT_LEDS);
 
-    uint8_t blinks[] = {DEVICE_ID/1000, DEVICE_ID/100%10, DEVICE_ID/10%10, DEVICE_ID%10};
+    nrf_gpio_cfg_output(LED_R);
+    nrf_gpio_cfg_output(LED_G);
+    nrf_gpio_cfg_output(LED_B);
+    nrf_gpio_cfg_input(BUTTON_PIN, NRF_GPIO_PIN_PULLUP);
+    static uint8_t current_led = 0;
 
-    /* Toggle LEDs. */
-    while (true){
-        for (int i=0; i<ID_LEN; i++){
-            for (int j=0; j<blinks[i]; j++){
-                bsp_board_led_invert(i);
-                nrf_delay_ms(DELAY);
-                bsp_board_led_invert(i);
-                nrf_delay_ms(DELAY);
-            }
-            nrf_delay_ms(DELAY*2);
+    while (1){
+        if (nrf_gpio_pin_read(BUTTON_PIN) == 0){
+            play(hash_led(sequence[current_led]));
+            current_led = (current_led + 1) % 6;
+        } else{
+            clear_all();
         }
     }
-
 }
 
 /**
