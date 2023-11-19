@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "stdint.h": "c",
+        "stdbool.h": "c",
+        "nrf_gpio.h": "c",
+        "nrf_delay.h": "c"
+    }
+}
